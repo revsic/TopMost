@@ -85,6 +85,10 @@ struct MakeTop {
     MakeTop& operator=(MakeTop const&) = delete;
 
     void RunThread() {
+        if (log) {
+            logger() << "Start thread" << std::endl;
+        }
+
         runnable = true;
         setter = std::thread([this] {
             while (runnable) {
@@ -106,9 +110,18 @@ struct MakeTop {
                     int read = GetWindowTextA(hWnd, text, bufsize);
 
                     if (blacklist.find(text) == blacklist.end()) {
+                        if (log) {
+                            logger() << "other topmost app found (name: " << text << ')' << std::endl;
+                        }
+
                         SetChildWindowsTopMost();
                         if (hook) {
-                            HookSetWindowPos(hWnd);
+                            if (HookSetWindowPos(hWnd)) {
+                                logger() << "hook success" << std::endl;
+                            }
+                            else {
+                                logger() << "hook failure" << std::endl;
+                            }
                         }
                         break;
                     }
@@ -136,6 +149,10 @@ struct MakeTop {
         children = GetChildWindowHandles(pid);
     }
 
+    std::ostream& logger() {
+        return (std::cout << "[*] TopMost : ");
+    }
+
     static void SetTopMost(HWND hWnd) {
         SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
@@ -156,15 +173,15 @@ struct MakeTop {
         return pair.second;
     }
 
-    static void HookSetWindowPos(HWND hWnd) {
+    static bool HookSetWindowPos(HWND hWnd) {
         DWORD dwPid;
         if (!GetWindowThreadProcessId(hWnd, &dwPid)) {
-            return;
+            return false;
         }
 
         HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION, FALSE, dwPid);
         if (hProcess == INVALID_HANDLE_VALUE) {
-            return;
+            return false;
         }
 
         HMODULE hUser32 = GetModuleHandleW(L"User32.lib");
@@ -177,14 +194,20 @@ struct MakeTop {
         if (!VirtualProtectEx(hProcess, lpSetWindowPos, sizeof(opcode), 
                               PAGE_EXECUTE_READWRITE, &flOldProtect))
         {
-            return;
+            CloseHandle(hProcess);
+            return false;
         }
 
         SIZE_T written;
-        WriteProcessMemory(hProcess, lpSetWindowPos, opcode, sizeof(opcode), &written);
+        if (!WriteProcessMemory(hProcess, lpSetWindowPos, opcode, sizeof(opcode), &written)) {
+            CloseHandle(hProcess);
+            return false;
+        }
 
         VirtualProtectEx(hProcess, lpSetWindowPos, sizeof(opcode), flOldProtect, &flOldProtect);
         CloseHandle(hProcess);
+
+        return true;
     }
 };
 }
