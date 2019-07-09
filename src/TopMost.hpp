@@ -32,7 +32,8 @@ struct MakeTop {
     static std::optional<MakeTop> ByName(std::string const& title,
                                          bool runThread = true,
                                          bool hook = false,
-                                         bool log = false) {
+                                         bool log = false)
+    {
         HWND hWnd = FindWindowA(NULL, title.c_str());
         if (hWnd == NULL) {
             return std::nullopt;
@@ -57,6 +58,9 @@ struct MakeTop {
         SetChildWindowsTopMost();
         if (runThread) {
             RunThread();
+        } else {
+            runnable = true;
+            Loop();
         }
     }
 
@@ -66,19 +70,20 @@ struct MakeTop {
 
     MakeTop(MakeTop&& other) :
         pid(other.pid), children(std::move(other.children)), setter(std::move(other.setter)),
-        runnable(other.runnable), hook(other.hook)
+        runnable(other.runnable), hook(other.hook), log(other.log)
     {
         // Do Nothing
     }
 
     MakeTop(MakeTop const&) = delete;
 
-    MakeTop& operator=(MakeTop&& other) {
+    MakeTop& operator=(MakeTop&& other) noexcept {
         pid = other.pid;
         children = std::move(other.children);
         setter = std::move(other.setter);
         runnable = other.runnable;
         hook = other.hook;
+        log = other.log;
         return *this;
     }
 
@@ -90,46 +95,52 @@ struct MakeTop {
         }
 
         runnable = true;
-        setter = std::thread([this] {
-            while (runnable) {
-                std::this_thread::sleep_for(term);
+        setter = std::thread([this] { Loop(); });
+    }
 
-                UpdateChildWindows();
-                HWND hWnd = GetTopWindow(NULL);
-                static std::set<std::string> blacklist = {
-                    "MSCTFIME UI", "Default IME", ""
-                };
+    void Loop() {
+        if (log) {
+            logger() << "Start Loop" << std::endl;
+        }
 
-                while (hWnd != NULL) {
-                    if (children.find(hWnd) != children.end()) {
-                        break;
-                    }
+        while (runnable) {
+            std::this_thread::sleep_for(term);
 
-                    constexpr size_t bufsize = 1024;
-                    char text[bufsize] = { 0, };
-                    int read = GetWindowTextA(hWnd, text, bufsize);
+            UpdateChildWindows();
+            HWND hWnd = GetTopWindow(NULL);
+            static std::set<std::string> blacklist = {
+                "MSCTFIME UI", "Default IME", ""
+            };
 
-                    if (blacklist.find(text) == blacklist.end()) {
-                        if (log) {
-                            logger() << "other topmost app found (name: " << text << ')' << std::endl;
-                        }
-
-                        SetChildWindowsTopMost();
-                        if (hook) {
-                            if (HookSetWindowPos(hWnd)) {
-                                logger() << "hook success" << std::endl;
-                            }
-                            else {
-                                logger() << "hook failure" << std::endl;
-                            }
-                        }
-                        break;
-                    }
-
-                    hWnd = GetWindow(hWnd, GW_HWNDNEXT);
+            while (hWnd != NULL) {
+                if (children.find(hWnd) != children.end()) {
+                    break;
                 }
+
+                constexpr size_t bufsize = 1024;
+                char text[bufsize] = { 0, };
+                int read = GetWindowTextA(hWnd, text, bufsize);
+
+                if (blacklist.find(text) == blacklist.end()) {
+                    if (log) {
+                        logger() << "other topmost app found (name: " << text << ')' << std::endl;
+                    }
+
+                    SetChildWindowsTopMost();
+                    if (hook) {
+                        if (HookSetWindowPos(hWnd)) {
+                            logger() << "hook success" << std::endl;
+                        }
+                        else {
+                            logger() << "hook failure" << std::endl;
+                        }
+                    }
+                    break;
+                }
+
+                hWnd = GetWindow(hWnd, GW_HWNDNEXT);
             }
-        });
+        }
     }
 
     void Stop() {
