@@ -128,7 +128,7 @@ struct MakeTop {
 
                     SetChildWindowsTopMost();
                     if (hook) {
-                        if (HookSetWindowPos(hWnd)) {
+                        if (HookSetWindowPos(hWnd, log)) {
                             logger() << "hook success" << std::endl;
                         }
                         else {
@@ -184,19 +184,34 @@ struct MakeTop {
         return pair.second;
     }
 
-    static bool HookSetWindowPos(HWND hWnd) {
+    static bool HookSetWindowPos(HWND hWnd, bool log = false) {
         DWORD dwPid;
         if (!GetWindowThreadProcessId(hWnd, &dwPid)) {
+            if (log) {
+                std::cout << "[Hook] GetWindowThreadProcessId fail" << std::endl;
+            }
             return false;
         }
+        return HookSetWindowPos(dwPid, log);
+    }
 
+    static bool HookSetWindowPos(DWORD dwPid, bool log = false) {
         HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION, FALSE, dwPid);
         if (hProcess == INVALID_HANDLE_VALUE) {
+            if (log) {
+                std::cout << "[Hook] OpenProcess fail" << std::endl;
+            }
             return false;
         }
 
-        HMODULE hUser32 = GetModuleHandleW(L"User32.lib");
+        HMODULE hUser32 = GetModuleHandleW(L"User32.dll");
         FARPROC lpSetWindowPos = GetProcAddress(hUser32, "SetWindowPos");
+        if (hUser32 == NULL || lpSetWindowPos == NULL) {
+            if (log) {
+                std::cout << "[HOOK] GetProcAddress fail" << std::endl;
+            }
+            return false;
+        }
 
         // mov eax, 1; ret
         static BYTE opcode[] = { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3 };
@@ -205,12 +220,18 @@ struct MakeTop {
         if (!VirtualProtectEx(hProcess, lpSetWindowPos, sizeof(opcode), 
                               PAGE_EXECUTE_READWRITE, &flOldProtect))
         {
+            if (log) {
+                std::cout << "[Hook] VirtualProtectEx fail " << GetLastError() << std::endl;
+            }
             CloseHandle(hProcess);
             return false;
         }
 
         SIZE_T written;
         if (!WriteProcessMemory(hProcess, lpSetWindowPos, opcode, sizeof(opcode), &written)) {
+            if (log) {
+                std::cout << "[Hook] WriteProcessMemory fail " << GetLastError() << std::endl;
+            }
             CloseHandle(hProcess);
             return false;
         }
