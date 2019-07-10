@@ -167,7 +167,7 @@ struct MakeTop {
         DWORD dwPid;
         if (!GetWindowThreadProcessId(hWnd, &dwPid)) {
             if (log) {
-                std::cout << "[Hook] GetWindowThreadProcessId fail" << std::endl;
+                std::cout << "[*] Hook: GetWindowThreadProcessId fail" << std::endl;
             }
             return false;
         }
@@ -178,7 +178,7 @@ struct MakeTop {
         HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION, FALSE, dwPid);
         if (hProcess == INVALID_HANDLE_VALUE) {
             if (log) {
-                std::cout << "[Hook] OpenProcess fail" << std::endl;
+                std::cout << "[*] Hook: OpenProcess fail" << std::endl;
             }
             return false;
         }
@@ -187,7 +187,7 @@ struct MakeTop {
         FARPROC lpSetWindowPos = GetProcAddress(hUser32, "SetWindowPos");
         if (hUser32 == NULL || lpSetWindowPos == NULL) {
             if (log) {
-                std::cout << "[HOOK] GetProcAddress fail" << std::endl;
+                std::cout << "[*] Hook: GetProcAddress fail" << std::endl;
             }
             return false;
         }
@@ -200,7 +200,7 @@ struct MakeTop {
                               PAGE_EXECUTE_READWRITE, &flOldProtect))
         {
             if (log) {
-                std::cout << "[Hook] VirtualProtectEx fail " << GetLastError() << std::endl;
+                std::cout << "[*] Hook: VirtualProtectEx fail " << GetLastError() << std::endl;
             }
             CloseHandle(hProcess);
             return false;
@@ -209,7 +209,7 @@ struct MakeTop {
         SIZE_T written;
         if (!WriteProcessMemory(hProcess, lpSetWindowPos, opcode, sizeof(opcode), &written)) {
             if (log) {
-                std::cout << "[Hook] WriteProcessMemory fail " << GetLastError() << std::endl;
+                std::cout << "[*] Hook: WriteProcessMemory fail " << GetLastError() << std::endl;
             }
             CloseHandle(hProcess);
             return false;
