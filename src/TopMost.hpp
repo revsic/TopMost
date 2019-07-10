@@ -19,6 +19,7 @@ struct MakeTop {
     std::thread setter;
 
     bool runnable;
+    bool runThread;
     bool hook;
     bool log;
 
@@ -48,7 +49,7 @@ struct MakeTop {
 
     MakeTop(DWORD pid, bool runThread = true, bool hook = false, bool log = false) : 
         pid(pid), children(GetChildWindowHandles(pid)), setter(),
-        runnable(false), hook(hook), log(log)
+        runnable(false), runThread(runThread), hook(hook), log(log)
     {
         SetChildWindowsTopMost();
         if (runThread) {
@@ -74,6 +75,7 @@ struct MakeTop {
         }
 
         runnable = true;
+        runThread = true;
         setter = std::thread([this] { Loop(); });
     }
 
@@ -125,7 +127,13 @@ struct MakeTop {
     void Stop() {
         if (runnable) {
             runnable = false;
+        }
+        if (runThread) {
             setter.join();
+            runThread = false;
+        }
+        for (HWND hWnd : children) {
+            SetTopMost(hWnd, HWND_NOTOPMOST);
         }
     }
 
@@ -143,8 +151,8 @@ struct MakeTop {
         return (std::cout << "[*] TopMost : ");
     }
 
-    static void SetTopMost(HWND hWnd) {
-        SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    static void SetTopMost(HWND hWnd, HWND pos = HWND_TOPMOST) {
+        SetWindowPos(hWnd, pos, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
 
     static std::set<HWND> GetChildWindowHandles(DWORD pid) {
