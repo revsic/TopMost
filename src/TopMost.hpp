@@ -4,7 +4,6 @@
 #include <Windows.h>
 
 #include <chrono>
-#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -25,30 +24,26 @@ struct MakeTop {
 
     static constexpr std::chrono::seconds term = 1s;
 
-    static MakeTop CurrentProc(bool runThread = true, bool hook = false, bool log = false) {
-        return MakeTop(GetCurrentProcessId(), runThread, hook, log);
+    static std::unique_ptr<MakeTop> CurrentProc(bool runThread = true, bool hook = false, bool log = false) {
+        return std::make_unique<MakeTop>(GetCurrentProcessId(), runThread, hook, log);
     }
 
-    static std::optional<MakeTop> ByName(std::string const& title,
-                                         bool runThread = true,
-                                         bool hook = false,
-                                         bool log = false)
+    static std::unique_ptr<MakeTop> ByName(std::string const& title,
+                                           bool runThread = true,
+                                           bool hook = false,
+                                           bool log = false)
     {
         HWND hWnd = FindWindowA(NULL, title.c_str());
         if (hWnd == NULL) {
-            return std::nullopt;
+            return nullptr;
         }
 
         DWORD dwPid;
         if (!GetWindowThreadProcessId(hWnd, &dwPid)) {
-            return std::nullopt;
+            return nullptr;
         }
 
-        return std::make_optional<MakeTop>(dwPid, runThread, hook, log);
-    }
-
-    MakeTop() : pid(0), children(), setter(), runnable(false), hook(false), log(false) {
-        // Do Nothing
+        return std::make_unique<MakeTop>(dwPid, runThread, hook, log);
     }
 
     MakeTop(DWORD pid, bool runThread = true, bool hook = false, bool log = false) : 
@@ -68,25 +63,9 @@ struct MakeTop {
         Stop();
     }
 
-    MakeTop(MakeTop&& other) :
-        pid(other.pid), children(std::move(other.children)), setter(std::move(other.setter)),
-        runnable(other.runnable), hook(other.hook), log(other.log)
-    {
-        // Do Nothing
-    }
-
+    MakeTop(MakeTop&& other) = delete;
     MakeTop(MakeTop const&) = delete;
-
-    MakeTop& operator=(MakeTop&& other) noexcept {
-        pid = other.pid;
-        children = std::move(other.children);
-        setter = std::move(other.setter);
-        runnable = other.runnable;
-        hook = other.hook;
-        log = other.log;
-        return *this;
-    }
-
+    MakeTop& operator=(MakeTop&& other) = delete;
     MakeTop& operator=(MakeTop const&) = delete;
 
     void RunThread() {
