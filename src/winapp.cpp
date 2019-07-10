@@ -13,7 +13,7 @@ int main() {
     std::string opt;
     std::cin >> opt;
 
-    TopMost::MakeTop topper;
+    std::unique_ptr<TopMost::MakeTop> topper;
 
     if (opt == "current") {
         topper = TopMost::MakeTop::CurrentProc(false, false, true);
@@ -21,27 +21,23 @@ int main() {
     else if (opt == "pid") {
         DWORD dwPid;
         std::cin >> dwPid;
-        topper = TopMost::MakeTop(dwPid, false, false, true);
+        topper = std::make_unique<TopMost::MakeTop>(dwPid, false, false, true);
     }
     else if (opt == "title") {
         std::string name;
         std::getline(std::cin, name);
 
-        auto optTopper = TopMost::MakeTop::ByName(name, false, false, true);
-        if (!optTopper.has_value()) {
+        topper = TopMost::MakeTop::ByName(name, false, false, true);
+        if (topper == nullptr) {
             std::cout << "[*] Couldn't find window\n";
             return 1;
         }
-
-        topper = std::move(optTopper.value());
     }
     else {
         std::cout << "[*] Invalid input\n";
         return 1;
     }
 
-    std::cout << "Enter any value to stop topmost app" << std::endl;
-    std::cin >> opt;
-
+    system("pause");
     return 0;
 }
