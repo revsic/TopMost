@@ -3,6 +3,7 @@
 
 #include <Windows.h>
 
+#include <iostream>
 #include <chrono>
 #include <set>
 #include <stdexcept>
