@@ -1,0 +1,16 @@
+{
+  "name": "topmost",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "gypfile": true,
+  "dependencies": {
+    "bindings": "^1.5.0",
+    "nan": "^2.14.0"
+  }
+}
