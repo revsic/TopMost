@@ -16,18 +16,18 @@ int main() {
     std::unique_ptr<TopMost::MakeTop> topper;
 
     if (opt == "current") {
-        topper = TopMost::MakeTop::CurrentProc(false, false, true);
+        topper = TopMost::MakeTop::CurrentProc(true, false, true);
     }
     else if (opt == "pid") {
         DWORD dwPid;
         std::cin >> dwPid;
-        topper = std::make_unique<TopMost::MakeTop>(dwPid, false, false, true);
+        topper = std::make_unique<TopMost::MakeTop>(dwPid, true, false, true);
     }
     else if (opt == "title") {
         std::string name;
         std::getline(std::cin, name);
 
-        topper = TopMost::MakeTop::ByName(name, false, false, true);
+        topper = TopMost::MakeTop::ByName(name, true, false, true);
         if (topper == nullptr) {
             std::cout << "[*] Couldn't find window\n";
             return 1;
