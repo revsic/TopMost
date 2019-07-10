@@ -8,6 +8,7 @@ Single header topmost library, make window always topmost.
 
 - [Sample: winapp](#sample-winapp)
 - [Sample: node-gyp](#sample-node-gyp)
+
 Include library.
 ```cpp
 #include "TopMost.hpp"
