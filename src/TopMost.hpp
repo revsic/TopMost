@@ -189,11 +189,12 @@ struct MakeTop {
             if (log) {
                 std::cout << "[*] Hook: GetProcAddress fail" << std::endl;
             }
+            CloseHandle(hProcess);
             return false;
         }
 
         // mov eax, 1; ret
-        static BYTE opcode[] = { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3 };
+        static BYTE opcode[] = { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3, 0xCC, 0xCC };
 
         DWORD flOldProtect;
         if (!VirtualProtectEx(hProcess, lpSetWindowPos, sizeof(opcode), 
